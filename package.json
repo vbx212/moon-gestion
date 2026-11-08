@@ -1,0 +1,9 @@
+{
+  "name": "moon-gestion",
+  "version": "1.0.0",
+  "description": "Bot Discord Moon Gestion",
+  "main": "src/index.js",
+  "scripts": { "start": "node src/index.js" },
+  "engines": { "node": ">=20.0.0" },
+  "dependencies": { "discord.js": "^14.19.3", "dotenv": "^16.4.7" }
+}
