@@ -165,3 +165,55 @@ client.on("guildAuditLogEntryCreate", async (entry, g) => {
 client.on("error", console.error);
 process.on("unhandledRejection", console.error);
 client.login(process.env.DISCORD_TOKEN);
+
+
+// MOON_STATUS_SERVER — petite page web + endpoint pour le contrôle externe
+const http = require("node:http");
+const statusServer = http.createServer((req, res) => {
+  const path = (req.url || "/").split("?")[0];
+  const online = client.isReady();
+  const status = {
+    name: "Moon Gestion",
+    status: online ? "online" : "starting",
+    botOnline: online,
+    botTag: online ? client.user.tag : null,
+    servers: online ? client.guilds.cache.size : 0,
+    uptimeSeconds: Math.floor(process.uptime())
+  };
+
+  if (path === "/health" || path === "/api/status") {
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+    return res.end(JSON.stringify(status));
+  }
+
+  if (path !== "/") {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    return res.end("Page introuvable");
+  }
+
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(`<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Moon Gestion — Statut</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at top,#30205a,#0b0b12 60%);color:#f5f3ff;font-family:Arial,sans-serif}.card{width:min(100%,520px);padding:34px;border:1px solid #ffffff20;border-radius:24px;background:#171522eF;box-shadow:0 20px 70px #0008;text-align:center}.moon{font-size:48px}.tag{color:#b9a5ff;font-size:12px;letter-spacing:3px;text-transform:uppercase}.state{display:inline-flex;align-items:center;gap:9px;margin:22px 0;padding:10px 16px;border-radius:30px;background:#ffffff12}.dot{width:9px;height:9px;border-radius:50%;background:#fbbf24}.online .dot{background:#34d399;box-shadow:0 0 12px #34d399}.offline .dot{background:#f87171}h1{margin:10px 0;font-size:30px}.muted{color:#aaa6ba;line-height:1.6}.stats{display:flex;justify-content:center;gap:12px;margin-top:24px}.stat{flex:1;padding:15px;border-radius:14px;background:#ffffff0c}.num{font-size:23px;font-weight:bold}.label{margin-top:5px;color:#aaa6ba;font-size:12px}.foot{margin-top:25px;color:#777286;font-size:12px}
+</style>
+</head>
+<body><main class="card">
+<div class="moon">🌙</div><div class="tag">Moon Community</div><h1>Moon Gestion</h1>
+<div id="state" class="state"><span class="dot"></span><strong id="stateText">Vérification...</strong></div>
+<p class="muted" id="message">État du bot Discord en cours de vérification.</p>
+<div class="stats"><div class="stat"><div class="num" id="servers">—</div><div class="label">Serveurs</div></div><div class="stat"><div class="num" id="uptime">—</div><div class="label">Temps actif</div></div></div>
+<div class="foot">Actualisation automatique • Moon Gestion</div>
+</main>
+<script>
+async function refresh(){try{const r=await fetch('/api/status',{cache:'no-store'});const d=await r.json();const box=document.getElementById('state');box.className='state '+(d.botOnline?'online':'offline');document.getElementById('stateText').textContent=d.botOnline?'Bot en ligne':'Bot en démarrage';document.getElementById('message').textContent=d.botOnline?'Moon Gestion est connecté à Discord.':'Le site répond, le bot se connecte à Discord.';document.getElementById('servers').textContent=d.servers;const s=d.uptimeSeconds;document.getElementById('uptime').textContent=s>=3600?Math.floor(s/3600)+' h':Math.floor(s/60)+' min';}catch(e){document.getElementById('state').className='state offline';document.getElementById('stateText').textContent='Statut indisponible';document.getElementById('message').textContent='Impossible de récupérer le statut pour le moment.';}}
+refresh();setInterval(refresh,30000);
+</script></body></html>`);
+});
+statusServer.listen(Number(process.env.PORT) || 10000, "0.0.0.0", () => {
+  console.log("Page de statut Moon Gestion disponible sur le port " + (process.env.PORT || 10000));
+});
